@@ -74,7 +74,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 var certPool *x509.CertPool
 
 func init() {
-	certPool := x509.NewCertPool()
+	certPool = x509.NewCertPool()
 	b, err := ioutil.ReadFile("assets/ca.crt")
 	if err != nil {
 		panic(err)
