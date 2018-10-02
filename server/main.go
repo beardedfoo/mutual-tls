@@ -24,6 +24,11 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	// a strange UX where the client is not requested to chose a certificate
 	w.Header().Set("Connection", "close")
 
+	if len(req.TLS.PeerCertificates) == 0 {
+		w.Write([]byte("no certificate supplied!"))
+		return
+	}
+
 	cnChain := []string{}
 	for _, cert := range req.TLS.PeerCertificates {
 		cnChain = append(cnChain, string(cert.Subject.CommonName))
@@ -63,7 +68,7 @@ func main() {
 		Addr:    ":8000",
 		Handler: nil,
 		TLSConfig: &tls.Config{
-			ClientAuth:  	tls.RequireAnyClientCert,
+			ClientAuth:  	tls.RequestClientCert,
 			MinVersion:		tls.VersionTLS12,
 		},
 	}
