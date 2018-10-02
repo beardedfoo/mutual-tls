@@ -49,8 +49,10 @@ func main() {
 		Roots:   roots,
 	}
 
-	if chains, err := cert.Verify(opts); err != nil {
-		fmt.Printf("verification chains: %+v\n", chains)
+	chains, err := cert.Verify(opts)
+	if err != nil {
 		panic("failed to verify certificate: " + err.Error())
 	}
+
+	fmt.Printf("verified chains: %+v\n", chains)
 }
