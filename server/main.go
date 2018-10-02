@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
+
+	"golang.org/x/net/http2"
 )
 
 func handler(w http.ResponseWriter, req *http.Request) {
-	fmt.Printf("handler()")
+	log.Printf("handler() got %v certificates", len(req.TLS.PeerCertificates))
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(fmt.Sprintf("Received certificates: %v", req.TLS.PeerCertificates)))
 }
@@ -20,26 +21,14 @@ func main() {
 	server := &http.Server{
 		Addr:    ":8000",
 		Handler: nil,
+		TLSConfig: &tls.Config{
+			ClientAuth:  	tls.VerifyClientCertIfGiven,
+			MinVersion:		tls.VersionTLS12,
+		},
 	}
 
-	cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates:	[]tls.Certificate{cert},
-		ClientAuth:  	tls.VerifyClientCertIfGiven,
-		MinVersion:		tls.VersionTLS12,
-		NextProtos:  	[]string{"http/2"},
-	}
-
-	conn, err := net.Listen("tcp", server.Addr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	http2.ConfigureServer(server, nil)
 
 	fmt.Println("Listening on https://localhost:8000")
-	tlsListener := tls.NewListener(conn, tlsConfig)
-	server.Serve(tlsListener)
+	log.Fatal(server.ListenAndServeTLS("server.crt", "server.key"))
 }
