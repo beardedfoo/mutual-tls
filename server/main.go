@@ -26,6 +26,34 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("sent p12")
 }
 
+func jsTestHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/javascript")
+
+	p12Bytes, err := ioutil.ReadFile("assets/index.js")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	w.Write(p12Bytes)
+	
+	log.Printf("sent p12")
+}
+
+func htmlTestHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	p12Bytes, err := ioutil.ReadFile("assets/index.html")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	w.Write(p12Bytes)
+	
+	log.Printf("sent p12")
+}
+
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
 	// Request the HTTP client to close this connection, as keeping the connection open provides
@@ -85,11 +113,12 @@ func init() {
 func main() {
 	authMux := http.NewServeMux()
 	authMux.HandleFunc("/", loginHandler)
+	authMux.HandleFunc("/static/index.js", jsTestHandler)
 	authServer := &http.Server{
 		Addr:    ":8000",
 		Handler: authMux,
 		TLSConfig: &tls.Config{
-			ClientAuth: tls.RequestClientCert,
+			ClientAuth: tls.RequireAnyClientCert,
 			MinVersion: tls.VersionTLS12,
 		},
 	}
@@ -97,6 +126,8 @@ func main() {
 
 	registerMux := http.NewServeMux()
 	registerMux.HandleFunc("/", registerHandler)
+	registerMux.HandleFunc("/static/index.js", jsTestHandler)
+	registerMux.HandleFunc("/static/index.html", htmlTestHandler)
 	registerServer := &http.Server{
 		Addr:	":9000",
 		Handler: registerMux,
