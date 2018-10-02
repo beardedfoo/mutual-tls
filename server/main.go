@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "io/ioutil"
+	"io/ioutil"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -43,24 +43,17 @@ func handler(w http.ResponseWriter, req *http.Request) {
 }
 
 func init(){
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		panic(err)
-	}
-	opts.Roots = certPool
+	certPool := x509.NewCertPool()
 
-
-	/*
 	b, err := ioutil.ReadFile("assets/server.crt")
 	if err != nil {
 		panic(err)
 	}
-	serverCert, err := x509.ParseCertificate(b)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Cert: %+v\n", serverCert)
-	*/
+	certPool.AppendCertsFromPEM(b)
+
+	opts.Roots = certPool
+
+	fmt.Printf("opts: %+v\n", opts)
 }
 
 func main() {
