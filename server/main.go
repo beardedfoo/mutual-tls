@@ -1,13 +1,12 @@
 package main
 
 import (
-	// "io/ioutil"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"crypto/x509"
 	"strings"
 
 	"golang.org/x/net/http2"
@@ -35,10 +34,17 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	// a strange UX where the client is not requested to chose a certificate
 	w.Header().Set("Connection", "close")
 
+	if len(req.TLS.PeerCertificates) == 0 {
+		w.Write([]byte("no certificate supplied!"))
+		return
+	}
+
 	cnChain := []string{}
 	for _, cert := range req.TLS.PeerCertificates {
 		cnChain = append(cnChain, string(cert.Subject.CommonName))
 		chains, err := cert.Verify(x509.VerifyOptions{
+			Roots: certPool,
+			MaxConstraintComparisions: 10,
 		})
 		fmt.Printf("Certificate Chain: %+v\n", chains)
 		if err != nil {
@@ -49,9 +55,21 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 
 	log.Printf("handler() got %v certificates", strings.Join(cnChain, ","))
 
-
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Sprintf("Received certificates: %v", req.TLS.PeerCertificates)))
+	w.Write([]byte(fmt.Sprintf("Received certificates: %v\n", req.TLS.PeerCertificates)))
+	w.Write([]byte(fmt.Sprintf("Welcome: %s", cnChain[0])))
+
+}
+
+var certPool *x509.CertPool
+
+func init() {
+	certPool := x509.NewCertPool()
+	b, err := ioutil.ReadFile("assets/client.crt")
+	if err != nil {
+		panic(err)
+	}
+	certPool.AppendCertsFromPEM(b)
 }
 
 func main() {
@@ -61,8 +79,8 @@ func main() {
 		Addr:    ":8000",
 		Handler: authMux,
 		TLSConfig: &tls.Config{
-			ClientAuth:  	tls.RequireAnyClientCert,
-			MinVersion:		tls.VersionTLS12,
+			ClientAuth: tls.RequestClientCert,
+			MinVersion: tls.VersionTLS12,
 		},
 	}
 	http2.ConfigureServer(authServer, nil)
