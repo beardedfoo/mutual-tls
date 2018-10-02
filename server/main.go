@@ -75,7 +75,7 @@ var certPool *x509.CertPool
 
 func init() {
 	certPool := x509.NewCertPool()
-	b, err := ioutil.ReadFile("assets/client.crt")
+	b, err := ioutil.ReadFile("assets/ca.crt")
 	if err != nil {
 		panic(err)
 	}
