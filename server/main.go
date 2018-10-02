@@ -28,8 +28,6 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handler() got %v certificates", len(req.TLS.PeerCertificates))
-
 	// Request the HTTP client to close this connection, as keeping the connection open provides
 	// a strange UX where the client is not requested to chose a certificate
 	w.Header().Set("Connection", "close")
@@ -39,24 +37,36 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Write([]byte(fmt.Sprintf("Received certificates: %v\n", req.TLS.PeerCertificates)))
+
 	cnChain := []string{}
 	for _, cert := range req.TLS.PeerCertificates {
 		cnChain = append(cnChain, string(cert.Subject.CommonName))
-		chains, err := cert.Verify(x509.VerifyOptions{
+	}
+	log.Printf("loginHandler() got certificate chain: %v", strings.Join(cnChain, ","))
+
+
+	var authenticatedChain [][]*x509.Certificate
+	for _, cert := range req.TLS.PeerCertificates {
+		validChain, err := cert.Verify(x509.VerifyOptions{
 			Roots: certPool,
 			MaxConstraintComparisions: 10,
 		})
-		fmt.Printf("Certificate Chain: %+v\n", chains)
-		if err != nil {
-			w.Write([]byte("no verification, no go!"))
-			return
+		if err == nil {
+			fmt.Printf("Validated Certificate Chain: %+v\n", validChain)
+			authenticatedChain = validChain
+			break
 		}
 	}
 
-	log.Printf("handler() got %v certificates", strings.Join(cnChain, ","))
+
+	// If no chains validated, there is no login - write an error msg and return
+	if authenticatedChain == nil {
+		w.Write([]byte("no valid chains found in certificate!\n"))
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Sprintf("Received certificates: %v\n", req.TLS.PeerCertificates)))
 	w.Write([]byte(fmt.Sprintf("Welcome: %s", cnChain[0])))
 
 }
