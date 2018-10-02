@@ -22,7 +22,7 @@ func main() {
 		Addr:    ":8000",
 		Handler: nil,
 		TLSConfig: &tls.Config{
-			ClientAuth:  	tls.VerifyClientCertIfGiven,
+			ClientAuth:		tls.RequireAndVerifyClientCert,
 			MinVersion:		tls.VersionTLS12,
 		},
 	}
@@ -30,5 +30,5 @@ func main() {
 	http2.ConfigureServer(server, nil)
 
 	fmt.Println("Listening on https://localhost:8000")
-	log.Fatal(server.ListenAndServeTLS("server.crt", "server.key"))
+	log.Fatal(server.ListenAndServeTLS("assets/server.crt", "assets/server.key"))
 }
