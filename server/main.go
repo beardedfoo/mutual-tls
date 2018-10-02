@@ -42,23 +42,21 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	log.Printf("handler() got %v certificates", strings.Join(cnChain, ","))
 
-
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Sprintf("Received certificates: %v", req.TLS.PeerCertificates)))
+	w.Write([]byte(fmt.Sprintf("Received certificates: %v\n", req.TLS.PeerCertificates)))
+	w.Write([]byte(fmt.Sprintf("Welcome: %s", cnChain[0])))
+
 }
 
-func init(){
+func init() {
 	certPool := x509.NewCertPool()
-
-	b, err := ioutil.ReadFile("assets/server.crt")
+	b, err := ioutil.ReadFile("assets/client.crt")
 	if err != nil {
 		panic(err)
 	}
 	certPool.AppendCertsFromPEM(b)
 
 	opts.Roots = certPool
-
-	fmt.Printf("opts: %+v\n", opts)
 }
 
 func main() {
