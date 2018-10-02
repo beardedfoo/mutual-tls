@@ -4,6 +4,7 @@ import (
 	// "io/ioutil"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"crypto/x509"
@@ -12,12 +13,22 @@ import (
 	"golang.org/x/net/http2"
 )
 
-var (
-	opts = x509.VerifyOptions{
-	}
-)
+func registerHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/x-pkcs12")
 
-func handler(w http.ResponseWriter, req *http.Request) {
+	p12Bytes, err := ioutil.ReadFile("assets/client.p12")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	w.Write(p12Bytes)
+	
+	log.Printf("sent p12")
+}
+
+
+func loginHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handler() got %v certificates", len(req.TLS.PeerCertificates))
 
 	// Request the HTTP client to close this connection, as keeping the connection open provides
@@ -27,7 +38,8 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	cnChain := []string{}
 	for _, cert := range req.TLS.PeerCertificates {
 		cnChain = append(cnChain, string(cert.Subject.CommonName))
-		chains, err := cert.Verify(opts)
+		chains, err := cert.Verify(x509.VerifyOptions{
+		})
 		fmt.Printf("Certificate Chain: %+v\n", chains)
 		if err != nil {
 			w.Write([]byte("no verification, no go!"))
@@ -42,41 +54,36 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(fmt.Sprintf("Received certificates: %v", req.TLS.PeerCertificates)))
 }
 
-func init(){
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		panic(err)
-	}
-	opts.Roots = certPool
-
-
-	/*
-	b, err := ioutil.ReadFile("assets/server.crt")
-	if err != nil {
-		panic(err)
-	}
-	serverCert, err := x509.ParseCertificate(b)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Cert: %+v\n", serverCert)
-	*/
-}
-
 func main() {
-	http.HandleFunc("/", handler)
-
-	server := &http.Server{
+	authMux := http.NewServeMux()
+	authMux.HandleFunc("/", loginHandler)
+	authServer := &http.Server{
 		Addr:    ":8000",
-		Handler: nil,
+		Handler: authMux,
 		TLSConfig: &tls.Config{
 			ClientAuth:  	tls.RequireAnyClientCert,
 			MinVersion:		tls.VersionTLS12,
 		},
 	}
+	http2.ConfigureServer(authServer, nil)
 
-	http2.ConfigureServer(server, nil)
+	registerMux := http.NewServeMux()
+	registerMux.HandleFunc("/", registerHandler)
+	registerServer := &http.Server{
+		Addr:	":9000",
+		Handler: registerMux,
+		TLSConfig: &tls.Config{
+			ClientAuth:  	tls.NoClientCert,
+			MinVersion:		tls.VersionTLS12,
+		},
+	}
+	http2.ConfigureServer(registerServer, nil)
 
 	fmt.Println("Listening on https://localhost:8000")
-	log.Fatal(server.ListenAndServeTLS("assets/server.crt", "assets/server.key"))
+	go func() {
+		log.Fatal(authServer.ListenAndServeTLS("assets/server.crt", "assets/server.key"))
+	}()
+
+	fmt.Println("Listening on https://localhost:9000")
+	log.Fatal(registerServer.ListenAndServeTLS("assets/server.crt", "assets/server.key"))
 }
