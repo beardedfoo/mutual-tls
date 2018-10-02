@@ -1,1 +1,1 @@
-module github.com/beardedfoo/mutualtls
+module github.com/beardedfoo/mutual-tls
