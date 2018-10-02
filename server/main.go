@@ -1,12 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"crypto/x509"
 	"strings"
 
 	"golang.org/x/net/http2"
@@ -14,6 +14,7 @@ import (
 
 var (
 	opts = x509.VerifyOptions{
+		MaxConstraintComparisions: 10,
 	}
 )
 
@@ -66,8 +67,8 @@ func main() {
 		Addr:    ":8000",
 		Handler: nil,
 		TLSConfig: &tls.Config{
-			ClientAuth:  	tls.RequestClientCert,
-			MinVersion:		tls.VersionTLS12,
+			ClientAuth: tls.RequestClientCert,
+			MinVersion: tls.VersionTLS12,
 		},
 	}
 
