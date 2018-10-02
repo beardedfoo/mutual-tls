@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"crypto/x509"
+	"strings"
 
 	"golang.org/x/net/http2"
 )
@@ -18,13 +19,14 @@ var (
 
 func handler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handler() got %v certificates", len(req.TLS.PeerCertificates))
-	fmt.Printf("handler()\n")
-	fmt.Printf("Received certificates: %+v\n", req.TLS.PeerCertificates)
 
+	// Request the HTTP client to close this connection, as keeping the connection open provides
+	// a strange UX where the client is not requested to chose a certificate
+	w.Header().Set("Connection", "close")
+
+	cnChain := []string{}
 	for _, cert := range req.TLS.PeerCertificates {
-		fmt.Printf("Cert --- \n")
-		fmt.Printf("Issuer: %+v\n", cert.Issuer)
-		fmt.Printf("Subject: %+v\n", cert.Subject)
+		cnChain = append(cnChain, string(cert.Subject.CommonName))
 		chains, err := cert.Verify(opts)
 		fmt.Printf("Certificate Chain: %+v\n", chains)
 		if err != nil {
@@ -32,6 +34,9 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
+	log.Printf("handler() got %v certificates", strings.Join(cnChain, ","))
+
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(fmt.Sprintf("Received certificates: %v", req.TLS.PeerCertificates)))
