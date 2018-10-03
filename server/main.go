@@ -33,7 +33,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Connection", "close")
 
 	if len(req.TLS.PeerCertificates) == 0 {
-		w.Write([]byte("no certificate supplied!"))
+		w.Write([]byte("no certificate supplied!\n"))
 		return
 	}
 
@@ -67,7 +67,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(fmt.Sprintf("Welcome: %s", cnChain[0])))
+	w.Write([]byte(fmt.Sprintf("Welcome: %s\n", cnChain[0])))
 
 }
 
