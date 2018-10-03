@@ -35,6 +35,7 @@ func jsTestHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Set("Connection", "close")
 	w.Write(p12Bytes)
 
 	log.Printf("sent javascript")
