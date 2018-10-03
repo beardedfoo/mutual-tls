@@ -22,7 +22,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Write(p12Bytes)
-	
+
 	log.Printf("sent p12")
 }
 
@@ -36,8 +36,8 @@ func jsTestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Write(p12Bytes)
-	
-	log.Printf("sent p12")
+
+	log.Printf("sent javascript")
 }
 
 func htmlTestHandler(w http.ResponseWriter, req *http.Request) {
@@ -50,10 +50,9 @@ func htmlTestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Write(p12Bytes)
-	
-	log.Printf("sent p12")
-}
 
+	log.Printf("sent index.html")
+}
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
 	// Request the HTTP client to close this connection, as keeping the connection open provides
@@ -73,11 +72,10 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	log.Printf("loginHandler() got certificate chain: %v", strings.Join(cnChain, ","))
 
-
 	var authenticatedChain [][]*x509.Certificate
 	for _, cert := range req.TLS.PeerCertificates {
 		validChain, err := cert.Verify(x509.VerifyOptions{
-			Roots: certPool,
+			Roots:                     certPool,
 			MaxConstraintComparisions: 10,
 		})
 		if err == nil {
@@ -86,7 +84,6 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 	}
-
 
 	// If no chains validated, there is no login - write an error msg and return
 	if authenticatedChain == nil {
@@ -125,15 +122,15 @@ func main() {
 	http2.ConfigureServer(authServer, nil)
 
 	registerMux := http.NewServeMux()
-	registerMux.HandleFunc("/", registerHandler)
+	registerMux.HandleFunc("/register", registerHandler)
 	registerMux.HandleFunc("/static/index.js", jsTestHandler)
-	registerMux.HandleFunc("/static/index.html", htmlTestHandler)
+	registerMux.HandleFunc("/", htmlTestHandler)
 	registerServer := &http.Server{
-		Addr:	":9000",
+		Addr:    ":9000",
 		Handler: registerMux,
 		TLSConfig: &tls.Config{
-			ClientAuth:  	tls.NoClientCert,
-			MinVersion:		tls.VersionTLS12,
+			ClientAuth: tls.NoClientCert,
+			MinVersion: tls.VersionTLS12,
 		},
 	}
 	http2.ConfigureServer(registerServer, nil)

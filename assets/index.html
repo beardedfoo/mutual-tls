@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>Mutual TLS</title>
+  <head>
+    <title>Mutual TLS</title>
 
-		<script src="https://vps12.aoeu.me:8000/static/index.js"></script>
-	</head>
-	<body>
-		<div id="anchor" />
-			<p>Hello World</p>
-	</body>
+    <!-- <script src="https://localhost:8000/static/index.js"></script> -->
+  </head>
+  <body>
+    <div id="anchor" />
+    <p>Hello World</p>
+    <button name="blah" id="login-btn">Login</button>
+  </body>
+  <script>
+    var p = document.createElement("script");
+    p.src = "https://localhost:8000/static/index.js"
+    var elem = document.getElementById("anchor")
+
+    elem.onclick = function() {
+    console.log("hello")
+    document.body.appendChild(p);
+    }
+  </script>
 </html>
