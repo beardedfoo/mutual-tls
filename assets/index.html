@@ -12,7 +12,7 @@
   </body>
   <script>
     var p = document.createElement("script");
-    p.src = "https://localhost:8000/static/index.js"
+    p.src = "https://" + window.location.hostname + ":8000/static/index.js"
     var elem = document.getElementById("anchor")
 
     elem.onclick = function() {
