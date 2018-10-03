@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -36,9 +37,27 @@ func jsTestHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Connection", "close")
+
 	w.Write(p12Bytes)
 
 	log.Printf("sent javascript")
+}
+
+func namePlsHandler(w http.ResponseWriter, req *http.Request) {
+	certs, err := verifyCertificate(req.TLS.PeerCertificates)
+	if err != nil {
+		w.Write([]byte("invalid certificate"))
+		return
+	}
+
+	b, err := json.Marshal(&struct {
+		ClientName []string `json:"clientname"`
+	}{
+		ClientName: certs,
+	})
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(b)
 }
 
 func htmlTestHandler(w http.ResponseWriter, req *http.Request) {
@@ -53,6 +72,38 @@ func htmlTestHandler(w http.ResponseWriter, req *http.Request) {
 	w.Write(p12Bytes)
 
 	log.Printf("sent index.html")
+}
+
+func verifyCertificate(certs []*x509.Certificate) ([]string, error) {
+	if len(certs) == 0 {
+		return []string{}, fmt.Errorf("no certificates")
+	}
+
+	cnChain := []string{}
+	for _, cert := range certs {
+		cnChain = append(cnChain, string(cert.Subject.CommonName))
+	}
+	log.Printf("loginHandler() got certificate chain: %v", strings.Join(cnChain, ","))
+
+	var authenticatedChain [][]*x509.Certificate
+	for _, cert := range certs {
+		validChain, err := cert.Verify(x509.VerifyOptions{
+			Roots:                     certPool,
+			MaxConstraintComparisions: 10,
+		})
+		if err == nil {
+			fmt.Printf("Validated Certificate Chain: %+v\n", validChain)
+			authenticatedChain = validChain
+			break
+		}
+	}
+
+	// If no chains validated, there is no login - write an error msg and return
+	if authenticatedChain == nil {
+		return []string{}, fmt.Errorf("no valid chains found in certificate")
+	}
+
+	return cnChain, nil
 }
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
@@ -111,6 +162,7 @@ func init() {
 func main() {
 	authMux := http.NewServeMux()
 	authMux.HandleFunc("/", loginHandler)
+	authMux.HandleFunc("/me", namePlsHandler)
 	authMux.HandleFunc("/static/index.js", jsTestHandler)
 	authServer := &http.Server{
 		Addr:    ":8000",
